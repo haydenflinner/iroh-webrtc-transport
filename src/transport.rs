@@ -49,7 +49,8 @@ impl WebRtcTransport {
         remote_custom_addr: CustomAddr,
         opts: AttachOptions,
     ) -> anyhow::Result<()> {
-        self.tunnel.attach_str0m_peer(peer, remote_custom_addr, opts)
+        self.tunnel
+            .attach_str0m_peer(peer, remote_custom_addr, opts)
     }
 }
 

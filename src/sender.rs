@@ -24,10 +24,7 @@ impl WebRtcSender {
             .segment_size
             .unwrap_or(transmit.contents.len())
             .max(1);
-        transmit
-            .contents
-            .chunks(segment_size)
-            .map(|c| c.to_vec())
+        transmit.contents.chunks(segment_size).map(|c| c.to_vec())
     }
 }
 

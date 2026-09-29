@@ -5,13 +5,12 @@ use anyhow::{Context, Result};
 use iroh::{
     Endpoint, Watcher,
     endpoint::{
-        presets,
+        QuicTransportConfig, RecvStream, SendStream, presets,
         transports::{AddrKind, TransportBias},
-        QuicTransportConfig, RecvStream, SendStream,
     },
 };
 use iroh_webrtc_transport::{
-    AttachOptions, WebRtcTransport, WEBRTC_TRANSPORT_ID, custom_addr_from_opaque_data,
+    AttachOptions, WEBRTC_TRANSPORT_ID, WebRtcTransport, custom_addr_from_opaque_data,
 };
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -38,7 +37,9 @@ async fn line_chat(mut send: SendStream, recv: RecvStream, peer_label: &str) -> 
     let mut stdin = BufReader::new(io::stdin()).lines();
     let mut peer_lines = BufReader::new(recv).lines();
 
-    println!("Chat ready. Lines you type go to the client; prefix `{peer_label}` shows their lines.");
+    println!(
+        "Chat ready. Lines you type go to the client; prefix `{peer_label}` shows their lines."
+    );
     println!("Empty line or Ctrl+D exits.\n");
 
     loop {
@@ -84,18 +85,14 @@ async fn main() -> Result<()> {
 
     endpoint.online().await;
     let dial_to_server = endpoint.watch_addr().get();
-    let relay = dial_to_server
-        .relay_urls()
-        .next()
-        .cloned()
-        .context(
+    let relay =
+        dial_to_server.relay_urls().next().cloned().context(
             "no relay URL in local EndpointAddr; check network and preset (presets::N0)",
         )?;
 
     println!(
         "Signaling: run\n  cargo run --example client -- {} {}\nThen a chat session opens on the second QUIC connection (WebRTC-bridged path when selected).\nServer custom addr opaque bytes: sixteen 0x01 (must match client).",
-        dial_to_server.id,
-        relay
+        dial_to_server.id, relay
     );
 
     let server = {
@@ -145,9 +142,7 @@ async fn main() -> Result<()> {
             let Some(incoming2) = ep.accept().await else {
                 anyhow::bail!("endpoint closed before second accept");
             };
-            let mut accepting2 = incoming2
-                .accept()
-                .context("accept APP_ALPN handshake")?;
+            let mut accepting2 = incoming2.accept().context("accept APP_ALPN handshake")?;
             let alpn2 = accepting2.alpn().await.context("read APP ALPN")?;
             anyhow::ensure!(
                 alpn2 == APP_ALPN,

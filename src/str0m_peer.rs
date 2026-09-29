@@ -202,10 +202,11 @@ async fn str0m_user_bridge_loop(
                 if wrote {
                     break;
                 }
-                next_wake = match drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf).await {
-                    Ok(t) => t,
-                    Err(_) => return,
-                };
+                next_wake =
+                    match drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf).await {
+                        Ok(t) => t,
+                        Err(_) => return,
+                    };
             }
             let _ = drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf).await;
         }
@@ -361,10 +362,13 @@ impl WebRtcTunnel {
                         if wrote {
                             break;
                         }
-                        next_wake = match drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf).await {
-                            Ok(t) => t,
-                            Err(_) => return,
-                        };
+                        next_wake =
+                            match drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf)
+                                .await
+                            {
+                                Ok(t) => t,
+                                Err(_) => return,
+                            };
                     }
                     let _ = drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf).await;
                 }

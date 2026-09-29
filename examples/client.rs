@@ -6,13 +6,12 @@ use iroh::PublicKey;
 use iroh::{
     Endpoint, EndpointAddr, RelayUrl, TransportAddr,
     endpoint::{
-        presets,
+        QuicTransportConfig, RecvStream, SendStream, presets,
         transports::{AddrKind, TransportBias},
-        QuicTransportConfig, RecvStream, SendStream,
     },
 };
 use iroh_webrtc_transport::{
-    AttachOptions, WebRtcTransport, WEBRTC_TRANSPORT_ID, custom_addr_from_opaque_data,
+    AttachOptions, WEBRTC_TRANSPORT_ID, WebRtcTransport, custom_addr_from_opaque_data,
 };
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -47,7 +46,9 @@ async fn line_chat(mut send: SendStream, recv: RecvStream, peer_label: &str) -> 
     let mut stdin = BufReader::new(io::stdin()).lines();
     let mut peer_lines = BufReader::new(recv).lines();
 
-    println!("Chat ready. Lines you type go to the server; prefix `{peer_label}` shows their lines.");
+    println!(
+        "Chat ready. Lines you type go to the server; prefix `{peer_label}` shows their lines."
+    );
     println!("Empty line or Ctrl+D exits.\n");
 
     loop {

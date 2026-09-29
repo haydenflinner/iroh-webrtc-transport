@@ -14,16 +14,14 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use iroh::{
-    Endpoint, Watcher,
+    Endpoint, EndpointAddr, TransportAddr, Watcher,
     endpoint::{
-        presets,
+        QuicTransportConfig, presets,
         transports::{AddrKind, TransportBias},
-        QuicTransportConfig,
     },
-    EndpointAddr, TransportAddr,
 };
 use iroh_webrtc_transport::{
-    AttachOptions, WebRtcTransport, WEBRTC_TRANSPORT_ID, custom_addr_from_opaque_data,
+    AttachOptions, WEBRTC_TRANSPORT_ID, WebRtcTransport, custom_addr_from_opaque_data,
 };
 
 const SIGNALING_ALPN: &[u8] = b"iroh-webrtc-transport/signal/0";
@@ -132,9 +130,7 @@ async fn main() -> Result<()> {
             let Some(incoming2) = endpoint.accept().await else {
                 anyhow::bail!("server endpoint closed before second accept");
             };
-            let mut accepting2 = incoming2
-                .accept()
-                .context("accept app QUIC handshake")?;
+            let mut accepting2 = incoming2.accept().context("accept app QUIC handshake")?;
             let alpn2 = accepting2.alpn().await.context("read app ALPN")?;
             anyhow::ensure!(alpn2 == APP_ALPN, "expected APP_ALPN second");
             let app_conn = accepting2.await.context("finish app handshake")?;
