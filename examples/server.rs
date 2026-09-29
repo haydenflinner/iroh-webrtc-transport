@@ -5,9 +5,7 @@ use iroh::{
     Endpoint, Watcher,
     endpoint::{QuicTransportConfig, RecvStream, SendStream, presets},
 };
-use iroh_webrtc_transport::{
-    AttachOptions, WebRtcTransport, custom_addr_from_opaque_data,
-};
+use iroh_webrtc_transport::{AttachOptions, WebRtcTransport, custom_addr_from_opaque_data};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 /// QUIC connections carrying WebRTC SDP (JSEP) over the normal iroh path.

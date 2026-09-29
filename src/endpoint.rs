@@ -45,10 +45,7 @@ impl CustomEndpoint for WebRtcEndpoint {
     }
 
     fn create_sender(&self) -> Arc<dyn CustomSender> {
-        Arc::new(WebRtcSender::new(
-            self.tunnel.out_sender(),
-            self.tunnel.clone(),
-        ))
+        Arc::new(WebRtcSender::new(self.tunnel.clone()))
     }
 
     fn poll_recv(
@@ -65,12 +62,17 @@ impl CustomEndpoint for WebRtcEndpoint {
             return Poll::Ready(Ok(0));
         }
 
-        let mut recv = self
+        let mut rx = self
             .receiver
             .lock()
             .map_err(|_| io::Error::other("poisoned receiver mutex"))?;
-        match recv.try_recv() {
-            Ok(packet) => {
+        match rx.poll_recv(cx) {
+            Poll::Ready(Some(packet)) => {
+                tracing::trace!(
+                    src = ?packet.source_custom,
+                    len = packet.payload.len(),
+                    "received QUIC datagram over SCTP"
+                );
                 if bufs[0].len() < packet.payload.len() {
                     return Poll::Ready(Err(io::Error::new(
                         io::ErrorKind::InvalidData,
@@ -78,37 +80,16 @@ impl CustomEndpoint for WebRtcEndpoint {
                     )));
                 }
                 bufs[0][..packet.payload.len()].copy_from_slice(&packet.payload);
-                recv_infos[0] = RecvInfo::new(packet.source_custom, None);
                 metas[0].len = packet.payload.len();
                 metas[0].stride = packet.payload.len();
+                recv_infos[0] = RecvInfo::new(packet.source_custom, Some(self.tunnel.local_addr()));
                 Poll::Ready(Ok(1))
             }
-            Err(mpsc::error::TryRecvError::Empty) => {
-                drop(recv);
-                self.tunnel.register_recv_waker(cx.waker());
-                let mut recv = self
-                    .receiver
-                    .lock()
-                    .map_err(|_| io::Error::other("poisoned receiver mutex"))?;
-                if let Ok(packet) = recv.try_recv() {
-                    if bufs[0].len() < packet.payload.len() {
-                        return Poll::Ready(Err(io::Error::new(
-                            io::ErrorKind::InvalidData,
-                            "WebRTC bridge: recv buffer smaller than datagram",
-                        )));
-                    }
-                    bufs[0][..packet.payload.len()].copy_from_slice(&packet.payload);
-                    recv_infos[0] = RecvInfo::new(packet.source_custom, None);
-                    metas[0].len = packet.payload.len();
-                    metas[0].stride = packet.payload.len();
-                    return Poll::Ready(Ok(1));
-                }
-                Poll::Pending
-            }
-            Err(mpsc::error::TryRecvError::Disconnected) => Poll::Ready(Err(io::Error::new(
+            Poll::Ready(None) => Poll::Ready(Err(io::Error::new(
                 io::ErrorKind::BrokenPipe,
                 "WebRTC inbound queue closed",
             ))),
+            Poll::Pending => Poll::Pending,
         }
     }
 }

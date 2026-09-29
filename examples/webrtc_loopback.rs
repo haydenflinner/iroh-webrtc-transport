@@ -17,9 +17,7 @@ use iroh::{
     Endpoint, EndpointAddr, TransportAddr, Watcher,
     endpoint::{QuicTransportConfig, presets},
 };
-use iroh_webrtc_transport::{
-    AttachOptions, WebRtcTransport, custom_addr_from_opaque_data,
-};
+use iroh_webrtc_transport::{AttachOptions, WebRtcTransport, custom_addr_from_opaque_data};
 
 const SIGNALING_ALPN: &[u8] = b"iroh-webrtc-transport/signal/0";
 const APP_ALPN: &[u8] = b"iroh-webrtc-transport/loopback/0";
@@ -164,7 +162,8 @@ async fn main() -> Result<()> {
 
     let payload = b"loopback ping";
     client_transport
-        .webrtc_out_sender()
+        .webrtc_out_sender(&[1u8; 16])
+        .context("client SCTP out queue: server peer not attached")?
         .send(payload.to_vec())
         .map_err(|_| anyhow::anyhow!("client SCTP out queue closed"))?;
 

@@ -7,9 +7,7 @@ use iroh::{
     Endpoint, EndpointAddr, RelayUrl, TransportAddr,
     endpoint::{QuicTransportConfig, RecvStream, SendStream, presets},
 };
-use iroh_webrtc_transport::{
-    AttachOptions, WebRtcTransport, custom_addr_from_opaque_data,
-};
+use iroh_webrtc_transport::{AttachOptions, WebRtcTransport, custom_addr_from_opaque_data};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 const SIGNALING_ALPN: &[u8] = b"iroh-webrtc-transport/signal/0";
