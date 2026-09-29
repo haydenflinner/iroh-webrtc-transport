@@ -5,7 +5,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use iroh::endpoint::transports::{Addr, CustomEndpoint, CustomSender};
+use iroh::endpoint::transports::{CustomEndpoint, CustomSender, RecvInfo};
 use iroh_base::CustomAddr;
 use n0_watcher::Watchable;
 use noq_udp::RecvMeta;
@@ -56,11 +56,11 @@ impl CustomEndpoint for WebRtcEndpoint {
         cx: &mut Context,
         bufs: &mut [io::IoSliceMut<'_>],
         metas: &mut [RecvMeta],
-        source_addrs: &mut [Addr],
+        recv_infos: &mut [RecvInfo],
     ) -> Poll<io::Result<usize>> {
         let n = bufs.len();
         debug_assert_eq!(n, metas.len());
-        debug_assert_eq!(n, source_addrs.len());
+        debug_assert_eq!(n, recv_infos.len());
         if n == 0 {
             return Poll::Ready(Ok(0));
         }
@@ -78,7 +78,7 @@ impl CustomEndpoint for WebRtcEndpoint {
                     )));
                 }
                 bufs[0][..packet.payload.len()].copy_from_slice(&packet.payload);
-                source_addrs[0] = Addr::Custom(packet.source_custom);
+                recv_infos[0] = RecvInfo::new(packet.source_custom, None);
                 metas[0].len = packet.payload.len();
                 metas[0].stride = packet.payload.len();
                 Poll::Ready(Ok(1))
@@ -98,7 +98,7 @@ impl CustomEndpoint for WebRtcEndpoint {
                         )));
                     }
                     bufs[0][..packet.payload.len()].copy_from_slice(&packet.payload);
-                    source_addrs[0] = Addr::Custom(packet.source_custom);
+                    recv_infos[0] = RecvInfo::new(packet.source_custom, None);
                     metas[0].len = packet.payload.len();
                     metas[0].stride = packet.payload.len();
                     return Poll::Ready(Ok(1));

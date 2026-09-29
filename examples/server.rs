@@ -1,16 +1,12 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::{Context, Result};
 use iroh::{
     Endpoint, Watcher,
-    endpoint::{
-        QuicTransportConfig, RecvStream, SendStream, presets,
-        transports::{AddrKind, TransportBias},
-    },
+    endpoint::{QuicTransportConfig, RecvStream, SendStream, presets},
 };
 use iroh_webrtc_transport::{
-    AttachOptions, WEBRTC_TRANSPORT_ID, WebRtcTransport, custom_addr_from_opaque_data,
+    AttachOptions, WebRtcTransport, custom_addr_from_opaque_data,
 };
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -26,10 +22,6 @@ fn quic_with_datagrams() -> QuicTransportConfig {
         .datagram_receive_buffer_size(Some(256 * 1024))
         .datagram_send_buffer_size(256 * 1024)
         .build()
-}
-
-fn custom_bias() -> TransportBias {
-    TransportBias::primary().with_rtt_advantage(Duration::from_millis(100))
 }
 
 /// Line-oriented chat: each line is one message (UTF-8). Empty line or Ctrl+D on stdin ends your side.
@@ -77,7 +69,6 @@ async fn main() -> Result<()> {
     let endpoint = Endpoint::builder(presets::N0)
         .alpns(vec![SIGNALING_ALPN.to_vec(), APP_ALPN.to_vec()])
         .transport_config(quic_with_datagrams())
-        .transport_bias(AddrKind::Custom(WEBRTC_TRANSPORT_ID), custom_bias())
         .add_custom_transport(transport.clone())
         .bind()
         .await

@@ -13,6 +13,7 @@ mod jsep_core;
 mod jsep_envelope;
 mod jsep_quic;
 mod jsep_signaling;
+#[cfg(feature = "ws")]
 mod jsep_ws;
 mod sender;
 mod str0m_peer;
@@ -24,6 +25,7 @@ pub use jsep_core::{negotiate_dc_as_answerer, negotiate_dc_as_offerer};
 pub use jsep_envelope::SignalEnvelope;
 pub use jsep_quic::QuicSignaling;
 pub use jsep_signaling::Signaling;
+#[cfg(feature = "ws")]
 pub use jsep_ws::TcpWebSocket;
 pub use str0m_peer::Str0mPeer;
 pub use transport::{WEBRTC_TRANSPORT_ID, WebRtcTransport};

@@ -15,13 +15,10 @@ use anyhow::{Context, Result};
 use bytes::Bytes;
 use iroh::{
     Endpoint, EndpointAddr, TransportAddr, Watcher,
-    endpoint::{
-        QuicTransportConfig, presets,
-        transports::{AddrKind, TransportBias},
-    },
+    endpoint::{QuicTransportConfig, presets},
 };
 use iroh_webrtc_transport::{
-    AttachOptions, WEBRTC_TRANSPORT_ID, WebRtcTransport, custom_addr_from_opaque_data,
+    AttachOptions, WebRtcTransport, custom_addr_from_opaque_data,
 };
 
 const SIGNALING_ALPN: &[u8] = b"iroh-webrtc-transport/signal/0";
@@ -34,10 +31,6 @@ fn quic_with_datagrams() -> QuicTransportConfig {
         .datagram_receive_buffer_size(Some(256 * 1024))
         .datagram_send_buffer_size(256 * 1024)
         .build()
-}
-
-fn custom_bias() -> TransportBias {
-    TransportBias::primary().with_rtt_advantage(Duration::from_millis(100))
 }
 
 /// Prefer the WebRTC custom path while still including whatever relay/IP addresses discovery published.
@@ -71,7 +64,6 @@ async fn main() -> Result<()> {
     let server_endpoint = Endpoint::builder(presets::N0)
         .alpns(vec![SIGNALING_ALPN.to_vec(), APP_ALPN.to_vec()])
         .transport_config(quic_with_datagrams())
-        .transport_bias(AddrKind::Custom(WEBRTC_TRANSPORT_ID), custom_bias())
         .add_custom_transport(server_transport.clone())
         .bind()
         .await
@@ -80,7 +72,6 @@ async fn main() -> Result<()> {
     let client_endpoint = Endpoint::builder(presets::N0)
         .alpns(vec![SIGNALING_ALPN.to_vec(), APP_ALPN.to_vec()])
         .transport_config(quic_with_datagrams())
-        .transport_bias(AddrKind::Custom(WEBRTC_TRANSPORT_ID), custom_bias())
         .add_custom_transport(client_transport.clone())
         .bind()
         .await
