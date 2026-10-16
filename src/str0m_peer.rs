@@ -191,6 +191,7 @@ async fn str0m_user_bridge_loop(
             if bytes.is_empty() {
                 continue;
             }
+            let deadline = Instant::now() + CHANNEL_STALL_MAX;
             loop {
                 let mut wrote = false;
                 if let Some(mut ch) = rtc.channel(channel_id) {
@@ -208,6 +209,16 @@ async fn str0m_user_bridge_loop(
                         Ok(t) => t,
                         Err(_) => return,
                     };
+                // A blocked channel's retries pace on str0m's hint and
+                // give up — unbounded busy-retry pegs a core.
+                if Instant::now() >= deadline {
+                    break;
+                }
+                let wait = next_wake
+                    .saturating_duration_since(Instant::now())
+                    .max(Duration::from_millis(1))
+                    .min(Duration::from_millis(50));
+                tokio::time::sleep(wait).await;
             }
             let _ = drain_until_timeout(&mut rtc, &socket, advertised_addr, &mut buf).await;
         }
@@ -315,8 +326,18 @@ pub(crate) fn sdp_answer_from_string(s: &str) -> anyhow::Result<SdpAnswer> {
     SdpAnswer::from_sdp_string(s).map_err(|e| anyhow::anyhow!("{e}"))
 }
 
+/// How long one message retries a would-blocked SCTP channel before
+/// the packet drops. The tunnel carries QUIC packets, which tolerate
+/// loss — a peer that stops draining its datachannel (a frozen or
+/// timer-throttled browser tab) must not spin a core forever.
+const CHANNEL_STALL_MAX: Duration = Duration::from_secs(5);
+
 /// Write `bytes` as one SCTP message, draining `Rtc` output while the
 /// channel reports would-block, then flushing the pending transmits.
+/// Would-block retries are paced on str0m's timeout hint and bounded
+/// by `CHANNEL_STALL_MAX`: `Ok(false)` means the peer's receive window
+/// is closed, and retrying back-to-back busy-spins the task at 100%
+/// CPU — starving every other connection the process serves.
 async fn send_channel_data(
     rtc: &mut Rtc,
     socket: &UdpSocket,
@@ -328,15 +349,21 @@ async fn send_channel_data(
     if bytes.is_empty() {
         return drain_until_timeout(rtc, socket, advertised_addr, buf).await;
     }
+    let deadline = Instant::now() + CHANNEL_STALL_MAX;
     loop {
         let wrote = match rtc.channel(channel_id) {
             Some(mut ch) => ch.write(true, bytes)?,
             None => return Ok(Instant::now()),
         };
         let next_wake = drain_until_timeout(rtc, socket, advertised_addr, buf).await?;
-        if wrote {
+        if wrote || Instant::now() >= deadline {
             return Ok(next_wake);
         }
+        let wait = next_wake
+            .saturating_duration_since(Instant::now())
+            .max(Duration::from_millis(1))
+            .min(Duration::from_millis(50));
+        tokio::time::sleep(wait).await;
     }
 }
 
